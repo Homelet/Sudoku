@@ -1,3 +1,6 @@
+import copy
+
+
 def calculate_region(x, y):
 	if x <= 2:
 		if y <= 2:
@@ -37,13 +40,16 @@ class Node:
 	
 	
 	def reduce_possible(self, value):
-		self._possible_stack.append(self._possible)
 		if not self.is_set() and value in self._possible:
 			self._possible.remove(value)
 	
 	
+	def record(self):
+		self._possible_stack.append((self._possible, self._value))
+	
+	
 	def propagation(self):
-		self._possible = self._possible_stack.pop()
+		self._possible, self._value = self._possible_stack.pop()
 	
 	
 	def is_set(self):
@@ -51,6 +57,7 @@ class Node:
 	
 	
 	def set_value(self, value):
+		self.reduce_possible(value)
 		self._value = value
 		self._board.refresh(self)
 	
@@ -77,6 +84,14 @@ class Node:
 	
 	def grid_number(self):
 		return self._grid_number
+	
+	
+	def __repr__(self):
+		return "({}, {}, value={}, possible={})".format(self._x, self._y, self._value, self._possible)
+	
+	
+	def __str__(self):
+		return self.__repr__()
 
 
 class Board:
@@ -93,11 +108,10 @@ class Board:
 			[node for line in self._board for node in line if node.grid_number() is 7],
 			[node for line in self._board for node in line if node.grid_number() is 8],
 		]
-		self._stack = []
+		self.counter = 0
 	
 	
 	def refresh(self, n):
-		n.reduce_possible(n.value())
 		self.refresh_x(n.x(), n)
 		self.refresh_y(n.y(), n)
 		self.refresh_grid(n)
@@ -127,35 +141,18 @@ class Board:
 			c_node.reduce_possible(n.value())
 	
 	
-	def propagation(self, n):
-		n.propagation()
-		self.propagation_x(n.x(), n)
-		self.propagation_y(n.y(), n)
-		self.propagation_grid(n)
+	def record(self):
+		for line in self._board:
+			for node in line:
+				node.record()
+		self.counter += 1
 	
 	
-	def propagation_x(self, x, n):
-		l_x = [line[x] for line in self._board]
-		for c_node in l_x:
-			if c_node == n:
-				continue
-			c_node.propagation()
-	
-	
-	def propagation_y(self, y, n):
-		l_y = self._board[y]
-		for c_node in l_y:
-			if c_node == n:
-				continue
-			c_node.propagation()
-	
-	
-	def propagation_grid(self, n):
-		l_grid = self._grids[n.grid_number()]
-		for c_node in l_grid:
-			if c_node == n:
-				continue
-			c_node.propagation()
+	def propagation(self):
+		for line in self._board:
+			for node in line:
+				node.propagation()
+		self.counter -= 1
 	
 	
 	def init_status(self):
@@ -187,68 +184,65 @@ class Board:
 	
 	
 	def find_next(self):
-		next_node = None
-		for line in self._board:
-			for node in line:
-				if node.is_set():
-					continue
-				if next_node is None or node.possible_size() < next_node.possible_size():
-					next_node = node
-		return next_node
+		node_list = [node for line in self._board for node in line if not node.is_set()]
+		node_list.sort(key=lambda node: node.possible_size())
+		return node_list
+	
+	
+	def is_finished(self):
+		return all([node.is_set() for line in self._board for node in line])
 	
 	
 	def solve(self):
 		self.init_status()
-		self._attempt(self.find_next(), 0)
+		self._attempt(self.find_next())
 	
 	
-	def _attempt(self, node, checking):
+	def _attempt(self, node_list):
 		self.debug()
-		if node is not None:
-			possible = node.possible()
-			# the board is not solvable since every possible from one piece is removed
-			# so the board need propagation
+		for node in node_list:
+			print(node)
+			possible = copy.copy(node.possible())
 			if possible.__len__() == 0:
-				last = self._stack.pop()
-				self.propagation(last[0])
-				self._attempt(last[0], last[1] + 1)
+				pass
 			else:
-				if checking < possible.__len__():
-					node.set_value(possible[checking])
-					self._stack.append((node, checking))
-					self._attempt(self.find_next(), 0)
-				else:
-					last = self._stack.pop()
-					self.propagation(last[0])
-					self._attempt(last[0], last[1] + 1)
-		else:
-			print("Finished!")
+				for value in possible:
+					print("record = " + str(self.counter))
+					self.record()
+					node.set_value(value)
+					if self.is_finished():
+						print("Finished!")
+						return True
+					self._attempt(self.find_next())
+					self.propagation()
+					print("propagation = " + str(self.counter))
+		return False
 
 
 if __name__ == '__main__':
-	b = [
-		[1, None, 5, None, None, None, None, None, None],
-		[None, None, None, 1, None, 3, 5, 6, None],
-		[None, 4, None, None, None, None, 2, None, 1],
-		[9, None, None, None, 5, None, 7, 3, None],
-		[None, 8, None, 3, 1, 4, None, 2, None],
-		[None, 3, 6, None, 8, None, None, None, 4],
-		[4, None, 1, None, None, None, None, 9, None],
-		[None, 7, 2, 8, None, 5, None, None, None],
-		[None, None, None, None, None, None, 6, None, 5],
-	]
-	# b2 = [
-	# 	[8, None, None, None, 1, None, None, None, 3],
-	# 	[None, 4, 7, None, None, None, None, None, None],
-	# 	[9, 3, None, None, None, None, None, 4, 8],
-	# 	[None, None, None, 4, None, None, 8, None, None],
-	# 	[None, 7, None, None, 2, None, None, 5, None],
-	# 	[None, 9, None, 5, None, None, None, 2, None],
-	# 	[None, 8, None, None, None, 3, None, None, None],
-	# 	[None, None, None, None, None, None, 6, None, 7],
-	# 	[None, None, 1, None, None, None, 2, 8, 9],
+	# b = [
+	# 	[1, None, 5, None, None, None, None, None, None],
+	# 	[None, None, None, 1, None, 3, 5, 6, None],
+	# 	[None, 4, None, None, None, None, 2, None, 1],
+	# 	[9, None, None, None, 5, None, 7, 3, None],
+	# 	[None, 8, None, 3, 1, 4, None, 2, None],
+	# 	[None, 3, 6, None, 8, None, None, None, 4],
+	# 	[4, None, 1, None, None, None, None, 9, None],
+	# 	[None, 7, 2, 8, None, 5, None, None, None],
+	# 	[None, None, None, None, None, None, 6, None, 5],
 	# ]
-	# b1 = su.kou(su.make_board())
+	b = [
+		[8, None, None, None, 1, None, None, None, 3],
+		[None, 4, 7, None, None, None, None, None, None],
+		[9, 3, None, None, None, None, None, 4, 8],
+		[None, None, None, 4, None, None, 8, None, None],
+		[None, 7, None, None, 2, None, None, 5, None],
+		[None, 9, None, 5, None, None, None, 2, None],
+		[None, 8, None, None, None, 3, None, None, None],
+		[None, None, None, None, None, None, 6, None, 7],
+		[None, None, 1, None, None, None, 2, 8, 9],
+	]
+	# b = su.kou(su.make_board())
 	board = Board(b)
 	board.solve()
 	pass
