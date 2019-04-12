@@ -1,4 +1,8 @@
 import copy
+import sys
+from time import sleep
+
+import generate.generate as su
 
 
 def calculate_region(x, y):
@@ -36,7 +40,7 @@ class Node:
 			self._possible = [i for i in range(1, 10)]
 		else:
 			self._possible = []
-		self._possible_stack = []
+		self._notice = False
 	
 	
 	def reduce_possible(self, value):
@@ -44,12 +48,16 @@ class Node:
 			self._possible.remove(value)
 	
 	
-	def record(self):
-		self._possible_stack.append((self._possible, self._value))
+	def is_noticed(self):
+		return self._notice
 	
 	
-	def propagation(self):
-		self._possible, self._value = self._possible_stack.pop()
+	def notice(self):
+		self._notice = True
+	
+	
+	def discard_notice(self):
+		self._notice = False
 	
 	
 	def is_set(self):
@@ -80,6 +88,11 @@ class Node:
 	
 	def y(self):
 		return self._y
+	
+	
+	def restore(self, value_node):
+		self._value = value_node[1]
+		self._possible = value_node[2]
 	
 	
 	def grid_number(self):
@@ -142,17 +155,12 @@ class Board:
 	
 	
 	def record(self):
-		for line in self._board:
-			for node in line:
-				node.record()
-		self.counter += 1
+		return [(node, node.value(), copy.copy(node.possible())) for line in self._board for node in line]
 	
 	
-	def propagation(self):
-		for line in self._board:
-			for node in line:
-				node.propagation()
-		self.counter -= 1
+	def restore(self, recovery):
+		for record in recovery:
+			record[0].restore(record)
 	
 	
 	def init_status(self):
@@ -161,26 +169,34 @@ class Board:
 				self.refresh(node)
 	
 	
-	def debug(self):
+	def debug(self, file=sys.stdout):
 		real_index = 0
 		for x in range(13):
 			for y in range(13):
 				if x % 4 == 0:
 					if y % 4 == 0:
-						print("+", end="")
+						print("+", end="", file=file)
 					else:
-						print("---", end="")
+						print("---", end="", file=file)
 				else:
 					if y % 4 == 0:
-						print("|", end="")
+						print("|", end="", file=file)
 					else:
-						value = self._board[real_index % 9][real_index // 9].value()
-						if value is None:
-							print("   ", end="")
+						node = self._board[real_index % 9][real_index // 9]
+						value = node.value()
+						if node.is_noticed():
+							node.discard_notice()
+							if value is None:
+								print("( )", end="", file=file)
+							else:
+								print("(" + str(value) + ")", end="", file=file)
 						else:
-							print(" " + str(value) + " ", end="")
+							if value is None:
+								print("   ", end="", file=file)
+							else:
+								print(" " + str(value) + " ", end="", file=file)
 						real_index += 1
-			print("\n", end="")
+			print("\n", end="", file=file)
 	
 	
 	def find_next(self):
@@ -195,27 +211,33 @@ class Board:
 	
 	def solve(self):
 		self.init_status()
-		self._attempt(self.find_next())
+		result = self._attempt(self.find_next())
+		sleep(0.1)
+		print("Successful!" if result else "UnSuccessful!", file=sys.stderr)
+		self.debug(sys.stderr)
 	
 	
 	def _attempt(self, node_list):
 		self.debug()
 		for node in node_list:
-			print(node)
+			# print(node)
 			possible = copy.copy(node.possible())
 			if possible.__len__() == 0:
-				pass
+				break
 			else:
 				for value in possible:
-					print("record = " + str(self.counter))
-					self.record()
+					# print("record = " + str(self.counter))
+					recovery = self.record()
 					node.set_value(value)
+					node.notice()
 					if self.is_finished():
-						print("Finished!")
 						return True
-					self._attempt(self.find_next())
-					self.propagation()
-					print("propagation = " + str(self.counter))
+					else:
+						if self._attempt(self.find_next()):
+							return True
+						else:
+							self.restore(recovery)
+		# print("propagation = " + str(self.counter))
 		return False
 
 
@@ -231,18 +253,28 @@ if __name__ == '__main__':
 	# 	[None, 7, 2, 8, None, 5, None, None, None],
 	# 	[None, None, None, None, None, None, 6, None, 5],
 	# ]
-	b = [
-		[8, None, None, None, 1, None, None, None, 3],
-		[None, 4, 7, None, None, None, None, None, None],
-		[9, 3, None, None, None, None, None, 4, 8],
-		[None, None, None, 4, None, None, 8, None, None],
-		[None, 7, None, None, 2, None, None, 5, None],
-		[None, 9, None, 5, None, None, None, 2, None],
-		[None, 8, None, None, None, 3, None, None, None],
-		[None, None, None, None, None, None, 6, None, 7],
-		[None, None, 1, None, None, None, 2, 8, 9],
-	]
-	# b = su.kou(su.make_board())
-	board = Board(b)
-	board.solve()
-	pass
+	# b = [
+	# 	[8, None, None, None, 1, None, None, None, 3],
+	# 	[None, 4, 7, None, None, None, None, None, None],
+	# 	[9, 3, None, None, None, None, None, 4, 8],
+	# 	[None, None, None, 4, None, None, 8, None, None],
+	# 	[None, 7, None, None, 2, None, None, 5, None],
+	# 	[None, 9, None, 5, None, None, None, 2, None],
+	# 	[None, 8, None, None, None, 3, None, None, None],
+	# 	[None, None, None, None, None, None, 6, None, 7],
+	# 	[None, None, 1, None, None, None, 2, 8, 9],
+	# ]
+	# b = [
+	# 	[2, 8, 4, 7, 5, 9, 1, 6, 3],
+	# 	[6, 1, 7, 8, 3, 2, 5, 9, 4],
+	# 	[3, 9, 5, 4, 6, 1, 2, 7, None],
+	# 	[8, 5, 6, 2, 9, 4, 7, None, 1],
+	# 	[7, 4, 3, 1, 8, 5, None, 2, 9],
+	# 	[1, 2, 9, 3, 7, 6, 8, 4, 5],
+	# 	[4, 7, 8, 6, 1, 3, 9, 5, 2],
+	# 	[9, 6, 2, 5, 4, 8, 3, 1, 7],
+	# 	[5, 3, 1, 9, 2, 7, 4, 8, 6]
+	# ]
+	b = su.kou(su.make_board())
+	sudoku = Board(b)
+	sudoku.solve()
