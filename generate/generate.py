@@ -39,26 +39,3 @@ def kou(board, m=3):
 		x = random.choice(numbers) - 1
 		challange[x][j] = None
 	return challange
-# def print_board(challange, m=3):
-# 	spacer = "++-----+-----+-----++-----+-----+-----++-----+-----+-----++"  # 打印列表
-# 	print(spacer.replace('-', '='))
-# 	for i, line in enumerate(challange):
-# 		print("||  {}  |  {}  |  {}  ||  {}  |  {}  |  {}  ||  {}  |  {}  |  {}  ||"
-# 		      .format(*(cell or ' ' for cell in line)))
-# 		if (i + 1) % 3 == 0:
-# 			print(spacer.replace('-', '='))
-# 		else:
-# 			print(spacer)
-# 	return challange
-#
-#
-# def print_answers(board):
-# 	spacer = "++-----+-----+-----++-----+-----+-----++-----+-----+-----++"
-# 	print(spacer.replace('-', '='))
-# 	for i, line in enumerate(board):
-# 		print("||  {}  |  {}  |  {}  ||  {}  |  {}  |  {}  ||  {}  |  {}  |  {}  ||"
-# 		      .format(*(cell or ' ' for cell in line)))
-# 		if (i + 1) % 3 == 0:
-# 			print(spacer.replace('-', '='))
-# 		else:
-# 			print(spacer)
