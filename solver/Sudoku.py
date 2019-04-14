@@ -199,7 +199,7 @@ class Board:
 		self._init_status()
 	
 	
-	def _refresh(self, n):
+	def refresh(self, n):
 		"""
 		to reduce possible in the x, y, grid, direction
 		:param n: the node which is operating on
@@ -269,7 +269,7 @@ class Board:
 			for node in line:
 				if not node.is_set():
 					continue
-				self._refresh(node)
+				self.refresh(node)
 	
 	
 	def print_sudoku(self, file=sys.stdout):
