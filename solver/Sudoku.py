@@ -196,19 +196,20 @@ class Board:
 			[node for line in self._board for node in line if node.grid_number() is 7],
 			[node for line in self._board for node in line if node.grid_number() is 8],
 		]
+		self._init_status()
 	
 	
-	def refresh(self, n):
+	def _refresh(self, n):
 		"""
 		to reduce possible in the x, y, grid, direction
 		:param n: the node which is operating on
 		"""
-		self.refresh_x(n)
-		self.refresh_y(n)
-		self.refresh_grid(n)
+		self._refresh_x(n)
+		self._refresh_y(n)
+		self._refresh_grid(n)
 	
 	
-	def refresh_x(self, n):
+	def _refresh_x(self, n):
 		"""
 		to refresh all the node which has the same x value
 		:param n: the node which is operating on
@@ -220,7 +221,7 @@ class Board:
 			c_node.reduce_possible(n.value())
 	
 	
-	def refresh_y(self, n):
+	def _refresh_y(self, n):
 		"""
 		to refresh all the node which has the same y value
 		:param n: the node which is operating on
@@ -232,7 +233,7 @@ class Board:
 			c_node.reduce_possible(n.value())
 	
 	
-	def refresh_grid(self, n):
+	def _refresh_grid(self, n):
 		"""
 		to refresh all the node which has the same grid number
 		:param n: the node which is operating on
@@ -244,14 +245,14 @@ class Board:
 			c_node.reduce_possible(n.value())
 	
 	
-	def record(self):
+	def _record(self):
 		"""
 		:return: to save a record of the current board
 		"""
 		return [(node, node.value(), [i for i in node.possible()]) for line in self._board for node in line]
 	
 	
-	def restore(self, recovery):
+	def _restore(self, recovery):
 		"""
 		to restore a record from a recovery
 		:param recovery: the recovery that has been recoded
@@ -260,7 +261,7 @@ class Board:
 			record[0].restore(record)
 	
 	
-	def init_status(self):
+	def _init_status(self):
 		"""
 		to initialize the board since all the node default has [1~9] as it's possible
 		"""
@@ -268,7 +269,7 @@ class Board:
 			for node in line:
 				if not node.is_set():
 					continue
-				self.refresh(node)
+				self._refresh(node)
 	
 	
 	def print_sudoku(self, file=sys.stdout):
@@ -305,7 +306,7 @@ class Board:
 			print("\n", end="", file=file)
 	
 	
-	def find_next(self):
+	def _find_next(self):
 		"""
 		find all node that hasn't been set a value and sort them by the size of their possibility
 		:return: the node list
@@ -315,7 +316,7 @@ class Board:
 		return node_list
 	
 	
-	def is_finished(self):
+	def _is_finished(self):
 		"""
 		:return: True of all the value in the board has been set, False otherwise
 		"""
@@ -326,8 +327,7 @@ class Board:
 		"""
 		to attempt to solve this Suduko
 		"""
-		self.init_status()
-		result = self._attempt(self.find_next())
+		result = self._attempt(self._find_next())
 		sleep(0.1)
 		print("Successful!" if result else "UnSuccessful!", file=sys.stderr)
 		self.print_sudoku(sys.stderr)
@@ -352,22 +352,22 @@ class Board:
 				# iterate through all the possible value and try them all
 				for value in possible:
 					# to restore the current statue
-					recovery = self.record()
+					recovery = self._record()
 					# set the value
 					node.set_value(value)
 					# notice this node, since there is operation performed on it (style use)
 					node.notice()
 					# if the board is finished return True
-					if self.is_finished():
+					if self._is_finished():
 						return True
 					else:
 						# if not attempt to the next level
 						# if not success, restore the current recovery and try anther value or the next node
-						if self._attempt(self.find_next()):
+						if self._attempt(self._find_next()):
 							return True
 						else:
 							# restore the recovery
-							self.restore(recovery)
+							self._restore(recovery)
 		# fail return false
 		return False
 
